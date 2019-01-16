@@ -28,8 +28,8 @@ public class ProducerController {
         final UUID uuid = UUID.randomUUID();
         user.setUuid(uuid);
 
-        // TODO Write in kafka
-        producerService.sendUsername(user);
+        // Send message to kafka
+        producerService.sendMessage(user);
 
         return new ResponseEntity<>(user, HttpStatus.OK);
     }
