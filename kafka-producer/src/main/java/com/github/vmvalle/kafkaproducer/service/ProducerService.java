@@ -21,7 +21,7 @@ public class ProducerService {
     private String topic;
 
     public void sendMessage(User user) {
-        LOGGER.info(String.format("#### -> Producing message -> %s", user.getName()));
-        this.kafkaTemplate.send(topic, user);
+        LOGGER.info(String.format("#### -> Producing message -> %s", user.toString()));
+        kafkaTemplate.send(topic, user);
     }
 }

@@ -12,9 +12,7 @@ public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    @KafkaListener(topics = "${kafka.topic}",
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "${kafka.topic}", containerFactory = "kafkaListenerContainerFactory")
     public void receive(User user) {
         LOGGER.info("##### Received user: " + user.toString());
     }
