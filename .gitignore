@@ -9,3 +9,7 @@ kafka-producer/kafka-producer.iml
 kafka-consumer/kafka-consumer.iml
 core/target/
 core/core.iml
+.mvn/
+mvnw
+mvnw.cmd
+kafka-introduction.iml

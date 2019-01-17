@@ -12,9 +12,13 @@ public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    @KafkaListener(topics = "${kafka.topic}", containerFactory = "kafkaListenerContainerFactory")
+    /**
+     * Receive the user object sent by a kafka producer to the topic subscribed
+     * @param user User sent by a kafka producer
+     */
+    @KafkaListener(topics = "${kafka.topic}")
     public void receive(User user) {
-        LOGGER.info("##### Received user: " + user.toString());
+        LOGGER.info("Received user: " + user.toString());
     }
 
 }

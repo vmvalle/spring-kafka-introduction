@@ -23,19 +23,24 @@ public class ProducerService {
     @Value("${kafka.topic}")
     private String topic;
 
+    /**
+     * Send a user to the selected topic of kafka
+     *
+     * @param user User to be sent by kafka
+     */
     public void sendMessage(User user) {
 
-        LOGGER.info(String.format("#### -> Producing message -> %s", user.toString()));
+        LOGGER.info(String.format("Producing message -> %s", user.toString()));
         ListenableFuture<SendResult<String, User>> future = kafkaTemplate.send(topic, user);
         future.addCallback(new ListenableFutureCallback<SendResult<String, User>>() {
 
             @Override
             public void onSuccess(SendResult<String, User> result) {
-                System.out.println("Sent message=[" + user.toString() + "] with offset=[" + result.getRecordMetadata().offset() + "]");
+                LOGGER.info("Sent message=[" + user.toString() + "]");
             }
             @Override
             public void onFailure(Throwable ex) {
-                System.out.println("Unable to send message=[" + user.toString() + "] due to : " + ex.getMessage());
+                LOGGER.info("Unable to send message=[" + user.toString() + "] due to : " + ex.getMessage());
             }
         });
     }
