@@ -23,15 +23,23 @@ public class ProducerController {
 
     @PostMapping(value = "/new", consumes = MediaType.APPLICATION_JSON_UTF8_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity processNotification(@RequestBody final User user) {
-        LOGGER.info("Received request: {}", user);
-        // Generate UUID
-        final UUID uuid = UUID.randomUUID();
-        user.setUuid(uuid);
+        try{
+            LOGGER.info("Received request: {}", user);
 
-        // TODO Write in kafka
-        producerService.sendUsername(user);
+            // Generate UUID
+            final UUID uuid = UUID.randomUUID();
+            user.setUuid(uuid);
 
-        return new ResponseEntity<>(user, HttpStatus.OK);
+            // Send message to kafka
+            producerService.sendMessage(user);
+
+            return new ResponseEntity<>(user, HttpStatus.OK);
+
+        } catch (Exception e) {
+            LOGGER.error("An error has occurred.", e);
+            return new ResponseEntity<>(user, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
     }
 
 }
