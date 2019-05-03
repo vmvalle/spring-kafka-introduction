@@ -1,136 +1,75 @@
 package com.github.vmvalle.kafkaproducer.service;
 
-import com.google.common.collect.Lists;
-import com.twitter.hbc.ClientBuilder;
 import com.twitter.hbc.core.Client;
-import com.twitter.hbc.core.Constants;
-import com.twitter.hbc.core.Hosts;
-import com.twitter.hbc.core.HttpHosts;
-import com.twitter.hbc.core.endpoint.StatusesFilterEndpoint;
-import com.twitter.hbc.core.processor.StringDelimitedProcessor;
-import com.twitter.hbc.httpclient.auth.Authentication;
-import com.twitter.hbc.httpclient.auth.OAuth1;
-import org.apache.kafka.clients.producer.*;
-import org.apache.kafka.common.serialization.StringSerializer;
+import com.twitter.hbc.httpclient.BasicClient;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+@Service
 public class TwitterProducer {
 
-    Logger logger = LoggerFactory.getLogger(TwitterProducer.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(TwitterProducer.class);
 
-    // use your own credentials - don't share them with anyone
-    String consumerKey = "SleaNjEbbHaAwUuQR4GqKkraZ";
-    String consumerSecret = "8shHJHXTvFNSq6ODdp3KXJovE1DMFy1nFJ7GU9q0mSpztwbcMy";
-    String token = "1119626009039519744-pJgiObCqiP3D7iiygQEvvt10YnirZ8";
-    String secret = "VSiLOqFmihwLdYRKFGe9OcCDyAMJ7DkVC1WcH1X1yBZxi";
+    @Autowired
+    private KafkaTemplate<String,String> kafkaTemplate;
 
-    List<String> terms = Lists.newArrayList("NFL", "NBA");
+    @Value("${kafka.topic}")
+    private String topic;
+
+    @Autowired
+    @Qualifier("twitterClient")
+    private BasicClient twitterClient;
+
+    @Autowired
+    @Qualifier("msgQueueTwitter")
+    private BlockingQueue<String> msgQueueTwitter;
 
 
-    public TwitterProducer(){}
+    @Scheduled(fixedDelayString = "${fixedDelay.in.milliseconds}")
+    public void sendTweetsToKafka() {
 
-    public static void main(String[] args) {
-        new TwitterProducer().run();
-    }
+        for (int msgRead = 0; msgRead < 10; msgRead++) {
+            if (twitterClient.isDone()) {
+                System.out.println("Client connection closed unexpectedly: " + twitterClient.getExitEvent().getMessage());
+                break;
+            }
 
-    public void run(){
-
-        logger.info("Setup");
-
-        /** Set up your blocking queues: Be sure to size these properly based on expected TPS of your stream */
-        BlockingQueue<String> msgQueue = new LinkedBlockingQueue<String>(1000);
-
-        // create a twitter client
-        Client client = createTwitterClient(msgQueue);
-        // Attempts to establish a connection.
-        client.connect();
-
-        // create a kafka producer
-        KafkaProducer<String, String> producer = createKafkaProducer();
-
-        // add a shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info("stopping application...");
-            logger.info("shutting down client from twitter...");
-            client.stop();
-            logger.info("closing producer...");
-            producer.close();
-            logger.info("done!");
-        }));
-
-        // loop to send tweets to kafka
-        // on a different thread, or multiple different threads....
-        while (!client.isDone()) {
             String msg = null;
             try {
-                msg = msgQueue.poll(5, TimeUnit.SECONDS);
+                msg = msgQueueTwitter.poll(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-                client.stop();
+                twitterClient.stop();
             }
             if (msg != null){
-                logger.info(msg);
-                producer.send(new ProducerRecord<>("twitter_tweets", null, msg), (recordMetadata, e) -> {
+                LOGGER.info(msg);
+                /*
+                kafkaProducer.send(new ProducerRecord<>(topic, null, msg), (recordMetadata, e) -> {
                     if (e != null) {
-                        logger.error("Something bad happened", e);
+                        LOGGER.error("Something bad happened", e);
                     }
                 });
+
+                 */
+                kafkaTemplate.send(topic, msg);
             }
         }
-        logger.info("End of application");
-    }
 
-    public Client createTwitterClient(BlockingQueue<String> msgQueue){
+        //twitterClient.stop();
 
-        /** Declare the host you want to connect to, the endpoint, and authentication (basic auth or oauth) */
-        Hosts hosebirdHosts = new HttpHosts(Constants.STREAM_HOST);
-        StatusesFilterEndpoint hosebirdEndpoint = new StatusesFilterEndpoint();
+        // Print some stats
+        LOGGER.info("The client read {} messages!", twitterClient.getStatsTracker().getNumMessages());
 
-        hosebirdEndpoint.trackTerms(terms);
-
-        // These secrets should be read from a config file
-        Authentication hosebirdAuth = new OAuth1(consumerKey, consumerSecret, token, secret);
-
-        ClientBuilder builder = new ClientBuilder()
-                .name("Hosebird-Client-01")                              // optional: mainly for the logs
-                .hosts(hosebirdHosts)
-                .authentication(hosebirdAuth)
-                .endpoint(hosebirdEndpoint)
-                .processor(new StringDelimitedProcessor(msgQueue));
-
-        Client hosebirdClient = builder.build();
-        return hosebirdClient;
-    }
-
-    public KafkaProducer<String, String> createKafkaProducer(){
-        String bootstrapServers = "127.0.0.1:9092";
-
-        // create Producer properties
-        Properties properties = new Properties();
-        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-
-        // create safe Producer
-        properties.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
-        properties.setProperty(ProducerConfig.ACKS_CONFIG, "all");
-        properties.setProperty(ProducerConfig.RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
-        properties.setProperty(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "5"); // kafka 2.0 >= 1.1 so we can keep this as 5. Use 1 otherwise.
-
-        // high throughput producer (at the expense of a bit of latency and CPU usage)
-        properties.setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy");
-        properties.setProperty(ProducerConfig.LINGER_MS_CONFIG, "20");
-        properties.setProperty(ProducerConfig.BATCH_SIZE_CONFIG, Integer.toString(32*1024)); // 32 KB batch size
-
-        // create the producer
-        KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
-        return producer;
     }
 }
