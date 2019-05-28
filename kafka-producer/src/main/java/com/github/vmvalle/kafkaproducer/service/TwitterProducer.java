@@ -51,14 +51,6 @@ public class TwitterProducer {
             }
             if (msg != null){
                 LOGGER.info(msg);
-                /*
-                kafkaProducer.send(new ProducerRecord<>(topic, null, msg), (recordMetadata, e) -> {
-                    if (e != null) {
-                        LOGGER.error("Something bad happened", e);
-                    }
-                });
-
-                 */
                 kafkaTemplate.send(topic, msg);
             }
         }

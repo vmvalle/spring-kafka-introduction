@@ -35,8 +35,8 @@ public class Consumer {
         request.source(tweetJson, XContentType.JSON);
 
         try {
-             IndexResponse indexResponse = client.index(request);
-            LOGGER.info("Response status: {}, TweetId: {}", indexResponse.status(), tweet.getId());
+            IndexResponse indexResponse = client.index(request);
+            LOGGER.info("Response ElasticSearch status: {}, TweetId: {}", indexResponse.status(), tweet.getId());
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -49,7 +49,6 @@ public class TwitterClientConfig {
                 .build();
 
         client.connect();
-
         return client;
     }
 
