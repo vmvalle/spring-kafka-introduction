@@ -22,8 +22,6 @@ import java.util.Map;
 @EnableKafkaStreams
 public class StreamProccess {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(StreamProccess.class);
-
     private static JsonParser jsonParser = new JsonParser();
 
     @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
@@ -39,7 +37,7 @@ public class StreamProccess {
     @Bean
     public KStream<Integer, String> kStream(StreamsBuilder kStreamBuilder) {
         KStream<Integer, String> stream = kStreamBuilder.stream("tweets");
-        stream.filter((k, jsonTweet) ->  extractUserFollowersInTweet((String) jsonTweet) > 1000)
+        stream.filter((k, jsonTweet) ->  extractUserFollowersInTweet(jsonTweet) > 1000)
                 .to("important_tweets");
 
         return stream;

@@ -26,7 +26,7 @@ public class TwitterClientConfig {
     String token = "1119626009039519744-pJgiObCqiP3D7iiygQEvvt10YnirZ8";
     String secret = "VSiLOqFmihwLdYRKFGe9OcCDyAMJ7DkVC1WcH1X1yBZxi";
 
-    List<String> terms = Lists.newArrayList("NFL", "NBA");
+    List<String> terms = Lists.newArrayList("NBA", "NFL");
 
     BlockingQueue<String> msgQueue = new LinkedBlockingQueue<>(1000);
 
