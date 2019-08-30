@@ -25,20 +25,18 @@ public class TwitterProducer {
     private String topic;
 
     @Autowired
-    @Qualifier("twitterClient")
     private BasicClient twitterClient;
 
     @Autowired
-    @Qualifier("msgQueueTwitter")
     private BlockingQueue<String> msgQueueTwitter;
-
 
     @Scheduled(fixedDelayString = "${fixedDelay.in.milliseconds}")
     public void sendTweetsToKafka() {
 
         for (int msgRead = 0; msgRead < 10; msgRead++) {
             if (twitterClient.isDone()) {
-                System.out.println("Client connection closed unexpectedly: " + twitterClient.getExitEvent().getMessage());
+                System.out.println("Client connection closed by: "
+                        + twitterClient.getExitEvent().getMessage());
                 break;
             }
 
@@ -46,7 +44,7 @@ public class TwitterProducer {
             try {
                 msg = msgQueueTwitter.poll(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOGGER.error("An exception ocurred!", e);
                 twitterClient.stop();
             }
             if (msg != null){
@@ -55,10 +53,8 @@ public class TwitterProducer {
             }
         }
 
-        //twitterClient.stop();
-
-        // Print some stats
         LOGGER.info("The client read {} messages!", twitterClient.getStatsTracker().getNumMessages());
-
     }
 }
+
+
